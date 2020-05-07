@@ -80,7 +80,6 @@ void PopulateHeader(PacketHeader* header, size_t size) {
 }
 
 UDP udp;
-bool ON = false;
 
 #define MSGTYPE_SET_COLOR 102
 #define MSGTYPE_SET_POWER 117
@@ -137,16 +136,48 @@ IPAddress BroadcastIP() {
   return IPAddress(bcast);
 }
 
+#define ON_PIN D2
+#define OFF_PIN D3
+#define LED_PIN D7
+
 void setup() {
   udp.begin(/*localPort=*/LOCAL_PORT);
   Serial.begin(9600);
+
+  pinMode(ON_PIN, INPUT_PULLDOWN);
+  pinMode(OFF_PIN, INPUT_PULLDOWN);
+  pinMode(LED_PIN, OUTPUT);
+  digitalWrite(LED_PIN, LOW);
 }
+
+bool LATCHED = false;
+uint32_t LED_ON_CYCLES = 1;
 
 void loop() {
   //SetColor(21845, UINT16_MAX, UINT16_MAX, 3500);
-  ON = !ON;
-  SetPower(ON);
-
-  delay(3000);
   
+  if (digitalRead(ON_PIN) == HIGH) {
+    delay(5);
+    if (digitalRead(ON_PIN) == HIGH && !LATCHED) {
+      SetPower(true);
+      LATCHED = true;
+      LED_ON_CYCLES = 100;
+    }
+  } else if (digitalRead(OFF_PIN) == HIGH) {
+    delay(5);
+    if (digitalRead(OFF_PIN) == HIGH && !LATCHED) {
+      SetPower(false);
+      LATCHED = true;
+      LED_ON_CYCLES = 100;
+    }
+  } else {
+    LATCHED = false;
+  }
+
+  if (LED_ON_CYCLES > 0) {
+    LED_ON_CYCLES--;
+    digitalWrite(LED_PIN, HIGH);
+  } else {
+    digitalWrite(LED_PIN, LOW);
+  }
 }
